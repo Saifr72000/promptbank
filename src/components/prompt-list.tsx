@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { Plus, Search, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Prompt, Folder } from "@/lib/database.types";
@@ -61,7 +59,7 @@ export function PromptList({
   });
 
   return (
-    <div className="flex flex-col h-full border-r">
+    <div className="flex flex-col h-full border-r overflow-hidden">
       <div className="p-4 border-b space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-lg">Prompts</h2>
@@ -81,7 +79,7 @@ export function PromptList({
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {filteredPrompts.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -103,48 +101,51 @@ export function PromptList({
             )}
           </div>
         ) : (
-          <div className="p-2 space-y-1">
+          <div className="p-2 space-y-1 overflow-hidden">
             {filteredPrompts.map((prompt) => (
               <button
                 key={prompt.id}
                 onClick={() => onSelectPrompt(prompt.id)}
                 className={cn(
-                  "w-full text-left p-3 rounded-md transition-colors",
+                  "text-left p-3 rounded-lg transition-all border-2",
                   selectedPromptId === prompt.id
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted"
+                    ? "border-primary bg-primary/5"
+                    : "border-transparent hover:bg-muted"
                 )}
+                style={{ width: "calc(100% - 0px)", display: "block" }}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{prompt.title}</p>
-                    <p
-                      className={cn(
-                        "text-sm truncate mt-0.5",
-                        selectedPromptId === prompt.id
-                          ? "text-primary-foreground/80"
-                          : "text-muted-foreground"
-                      )}
-                    >
-                      {prompt.content.slice(0, 100)}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 mt-2">
+                <p 
+                  className="font-medium"
+                  style={{ 
+                    overflow: "hidden", 
+                    textOverflow: "ellipsis", 
+                    whiteSpace: "nowrap",
+                    width: "100%",
+                    display: "block"
+                  }}
+                >
+                  {prompt.title}
+                </p>
+                <p
+                  className="text-sm mt-0.5 text-muted-foreground"
+                  style={{ 
+                    overflow: "hidden", 
+                    textOverflow: "ellipsis", 
+                    whiteSpace: "nowrap",
+                    width: "100%",
+                    display: "block"
+                  }}
+                >
+                  {prompt.content.slice(0, 100)}
+                </p>
+                <div className="flex items-center gap-2 mt-2 overflow-hidden">
                   {!selectedFolderId && (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 min-w-0 max-w-[100px]">
                       <div
-                        className="h-2 w-2 rounded-full"
+                        className="h-2 w-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: getFolderColor(prompt.folder_id) }}
                       />
-                      <span
-                        className={cn(
-                          "text-xs",
-                          selectedPromptId === prompt.id
-                            ? "text-primary-foreground/70"
-                            : "text-muted-foreground"
-                        )}
-                      >
+                      <span className="text-xs truncate text-muted-foreground">
                         {getFolderName(prompt.folder_id)}
                       </span>
                     </div>
@@ -154,34 +155,20 @@ export function PromptList({
                       {prompt.tags.slice(0, 2).map((tag) => (
                         <Badge
                           key={tag}
-                          variant={selectedPromptId === prompt.id ? "secondary" : "outline"}
+                          variant="outline"
                           className="text-xs px-1.5 py-0"
                         >
                           {tag}
                         </Badge>
                       ))}
                       {prompt.tags.length > 2 && (
-                        <span
-                          className={cn(
-                            "text-xs",
-                            selectedPromptId === prompt.id
-                              ? "text-primary-foreground/70"
-                              : "text-muted-foreground"
-                          )}
-                        >
+                        <span className="text-xs text-muted-foreground">
                           +{prompt.tags.length - 2}
                         </span>
                       )}
                     </div>
                   )}
-                  <span
-                    className={cn(
-                      "text-xs ml-auto",
-                      selectedPromptId === prompt.id
-                        ? "text-primary-foreground/70"
-                        : "text-muted-foreground"
-                    )}
-                  >
+                  <span className="text-xs ml-auto text-muted-foreground">
                     {formatDate(prompt.updated_at)}
                   </span>
                 </div>
@@ -189,7 +176,7 @@ export function PromptList({
             ))}
           </div>
         )}
-      </ScrollArea>
+      </div>
     </div>
   );
 }

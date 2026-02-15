@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Folder, MoreHorizontal, Plus, Pencil, Trash2 } from "lucide-react";
+import { Folder, MoreHorizontal, Plus, Pencil, Trash2, PanelLeftClose, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -47,9 +48,11 @@ interface FolderSidebarProps {
   folders: FolderType[];
   selectedFolderId: string | null;
   onSelectFolder: (folderId: string | null) => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export function FolderSidebar({ folders, selectedFolderId, onSelectFolder }: FolderSidebarProps) {
+export function FolderSidebar({ folders, selectedFolderId, onSelectFolder, collapsed = false, onToggleCollapse }: FolderSidebarProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -135,69 +138,124 @@ export function FolderSidebar({ folders, selectedFolderId, onSelectFolder }: Fol
 
   return (
     <div className="flex flex-col h-full border-r bg-muted/30">
-      <div className="p-4 border-b">
-        <h2 className="font-semibold text-lg">Folders</h2>
+      <div className={cn("p-4 border-b flex items-center", collapsed ? "justify-center" : "justify-between")}>
+        {!collapsed && <h2 className="font-semibold text-lg">Folders</h2>}
+        {onToggleCollapse && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 flex-shrink-0"
+            onClick={onToggleCollapse}
+          >
+            {collapsed ? (
+              <PanelLeft className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </Button>
+        )}
       </div>
       
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
-          <button
-            onClick={() => onSelectFolder(null)}
-            className={cn(
-              "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
-              selectedFolderId === null
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted"
-            )}
-          >
-            <Folder className="h-4 w-4" />
-            <span>All Prompts</span>
-          </button>
-
-          {folders.map((folder) => (
-            <div
-              key={folder.id}
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => onSelectFolder(null)}
+                  className={cn(
+                    "w-full flex items-center justify-center p-2 rounded-md transition-colors",
+                    selectedFolderId === null
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  )}
+                >
+                  <Folder className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">All Prompts</TooltipContent>
+            </Tooltip>
+          ) : (
+            <button
+              onClick={() => onSelectFolder(null)}
               className={cn(
-                "group flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer",
-                selectedFolderId === folder.id
+                "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                selectedFolderId === null
                   ? "bg-primary text-primary-foreground"
                   : "hover:bg-muted"
               )}
-              onClick={() => onSelectFolder(folder.id)}
             >
-              <div
-                className="h-3 w-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: folder.color || "#6366f1" }}
-              />
-              <span className="flex-1 truncate">{folder.name}</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
+              <Folder className="h-4 w-4" />
+              <span>All Prompts</span>
+            </button>
+          )}
+
+          {folders.map((folder) => (
+            collapsed ? (
+              <Tooltip key={folder.id}>
+                <TooltipTrigger asChild>
+                  <button
                     className={cn(
-                      "h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity",
-                      selectedFolderId === folder.id && "text-primary-foreground hover:text-primary-foreground"
+                      "w-full flex items-center justify-center p-2 rounded-md transition-colors",
+                      selectedFolderId === folder.id
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
                     )}
+                    onClick={() => onSelectFolder(folder.id)}
                   >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => openEditDialog(folder)}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Rename
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => openDeleteDialog(folder)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                    <div
+                      className="h-4 w-4 rounded-full"
+                      style={{ backgroundColor: folder.color || "#6366f1" }}
+                    />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">{folder.name}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <div
+                key={folder.id}
+                className={cn(
+                  "group flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer",
+                  selectedFolderId === folder.id
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted"
+                )}
+                onClick={() => onSelectFolder(folder.id)}
+              >
+                <div
+                  className="h-3 w-3 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: folder.color || "#6366f1" }}
+                />
+                <span className="flex-1 truncate">{folder.name}</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity",
+                        selectedFolderId === folder.id && "text-primary-foreground hover:text-primary-foreground"
+                      )}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => openEditDialog(folder)}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Rename
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => openDeleteDialog(folder)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )
           ))}
         </div>
       </ScrollArea>
@@ -205,10 +263,21 @@ export function FolderSidebar({ folders, selectedFolderId, onSelectFolder }: Fol
       <div className="p-2 border-t">
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
-              New Folder
-            </Button>
+            {collapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" className="w-full">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">New Folder</TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button variant="outline" className="w-full">
+                <Plus className="h-4 w-4 mr-2" />
+                New Folder
+              </Button>
+            )}
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LogOut, Download, Upload, User, Settings } from "lucide-react";
+import { LogOut, Download, Upload, User, Settings, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -114,7 +114,10 @@ export function Header({ userEmail }: HeaderProps) {
 
   return (
     <header className="h-14 border-b px-4 flex items-center justify-between bg-background">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center">
+          <Sparkles className="w-5 h-5 text-white dark:text-zinc-900" />
+        </div>
         <h1 className="text-xl font-bold">Promptbank</h1>
       </div>
 

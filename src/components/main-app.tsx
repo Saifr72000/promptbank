@@ -6,6 +6,7 @@ import { FolderSidebar } from "@/components/folder-sidebar";
 import { PromptList } from "@/components/prompt-list";
 import { PromptEditor } from "@/components/prompt-editor";
 import { CommandPalette } from "@/components/command-palette";
+import { cn } from "@/lib/utils";
 import type { Folder, Prompt } from "@/lib/database.types";
 
 interface MainAppProps {
@@ -22,6 +23,7 @@ export function MainApp({ userEmail, initialFolders, initialPrompts }: MainAppPr
   const [isNewPrompt, setIsNewPrompt] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Update state when props change (after server revalidation)
   useEffect(() => {
@@ -92,15 +94,20 @@ export function MainApp({ userEmail, initialFolders, initialPrompts }: MainAppPr
       <Header userEmail={userEmail} />
       
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-64 flex-shrink-0">
+        <div className={cn(
+          "flex-shrink-0 transition-all duration-300 ease-in-out",
+          sidebarCollapsed ? "w-16" : "w-64"
+        )}>
           <FolderSidebar
             folders={folders}
             selectedFolderId={selectedFolderId}
             onSelectFolder={setSelectedFolderId}
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
           />
         </div>
         
-        <div className="w-80 flex-shrink-0">
+        <div className="w-80 shrink-0 min-w-0 overflow-hidden">
           <PromptList
             prompts={prompts}
             folders={folders}
