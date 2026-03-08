@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Copy, Trash2, Check, FolderOpen } from "lucide-react";
+import { Copy, Trash2, Check, FolderOpen, Sparkles, RefreshCw, ArrowDownToLine, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,6 +27,14 @@ import {
 import { createPrompt, updatePrompt, deletePrompt } from "@/app/actions";
 import { toast } from "sonner";
 import type { Prompt, Folder } from "@/lib/database.types";
+
+const MODELS = [
+  { id: "gpt-4o", label: "GPT-4o", provider: "OpenAI" },
+  { id: "gpt-4o-mini", label: "GPT-4o Mini", provider: "OpenAI" },
+  { id: "claude-3-7-sonnet-20250219", label: "Claude 3.7 Sonnet", provider: "Anthropic" },
+  { id: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet", provider: "Anthropic" },
+  { id: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku", provider: "Anthropic" },
+];
 
 interface PromptEditorProps {
   prompt: Prompt | null;
@@ -56,6 +64,42 @@ export function PromptEditor({
   const [copied, setCopied] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("gpt-4o");
+  const [generatedCopied, setGeneratedCopied] = useState(false);
+  const [completion, setCompletion] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const complete = async (promptContent: string, model: string) => {
+    setCompletion("");
+    setIsGenerating(true);
+    try {
+      const res = await fetch("/api/generate-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: promptContent, model }),
+      });
+
+      if (!res.ok) {
+        toast.error("Failed to generate prompt. Check your API key.");
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) return;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        setCompletion((prev) => prev + chunk);
+      }
+    } catch {
+      toast.error("Failed to generate prompt. Check your API key.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   useEffect(() => {
     if (prompt) {
@@ -71,7 +115,8 @@ export function PromptEditor({
       setFolderId(selectedFolderId || folders[0]?.id || "");
       setHasChanges(false);
     }
-  }, [prompt, isNew, selectedFolderId, folders]);
+    setCompletion("");
+  }, [prompt, isNew, selectedFolderId, folders, setCompletion]);
 
   const handleChange = useCallback(() => {
     setHasChanges(true);
@@ -180,6 +225,27 @@ export function PromptEditor({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleGenerate = () => {
+    if (!content.trim()) {
+      toast.error("Add some content first to use as a foundation for generation");
+      return;
+    }
+    complete(content, selectedModel);
+  };
+
+  const handleCopyGenerated = async () => {
+    await navigator.clipboard.writeText(completion);
+    setGeneratedCopied(true);
+    toast.success("Copied to clipboard");
+    setTimeout(() => setGeneratedCopied(false), 2000);
+  };
+
+  const handleUseGenerated = () => {
+    setContent(completion);
+    setHasChanges(true);
+    toast.success("Generated prompt applied to content");
+  };
+
   const handleAddTag = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
@@ -199,7 +265,7 @@ export function PromptEditor({
 
   if (!prompt && !isNew) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+      <div className="h-full flex items-center justify-center text-muted-foreground">
         <div className="text-center">
           <FolderOpen className="h-16 w-16 mx-auto mb-4 opacity-50" />
           <p className="text-lg font-medium">Select a prompt</p>
@@ -211,34 +277,34 @@ export function PromptEditor({
 
   return (
     <div className="flex-1 flex flex-col h-full">
-      <div className="p-4 border-b flex items-center justify-between">
-        <h2 className="font-semibold text-lg">
+      <div className="p-3 sm:p-4 border-b flex items-center justify-between gap-2">
+        <h2 className="font-semibold text-base sm:text-lg truncate">
           {isNew ? "New Prompt" : "Edit Prompt"}
-          {saving && <span className="text-sm font-normal text-muted-foreground ml-2">Saving...</span>}
-          {hasChanges && !saving && <span className="text-sm font-normal text-muted-foreground ml-2">Unsaved changes</span>}
+          {saving && <span className="text-xs sm:text-sm font-normal text-muted-foreground ml-2">Saving...</span>}
+          {hasChanges && !saving && <span className="text-xs sm:text-sm font-normal text-muted-foreground ml-2 hidden sm:inline">Unsaved</span>}
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {!isNew && (
             <>
-              <Button variant="outline" size="sm" onClick={handleCopy}>
-                {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
-                {copied ? "Copied" : "Copy"}
+              <Button variant="outline" size="sm" onClick={handleCopy} className="px-2 sm:px-3">
+                {copied ? <Check className="h-4 w-4 sm:mr-1" /> : <Copy className="h-4 w-4 sm:mr-1" />}
+                <span className="hidden sm:inline">{copied ? "Copied" : "Copy"}</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsDeleteOpen(true)}
-                className="text-destructive hover:text-destructive"
+                className="text-destructive hover:text-destructive px-2 sm:px-3"
               >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Delete
+                <Trash2 className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Delete</span>
               </Button>
             </>
           )}
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4 space-y-4">
+      <div className="flex-1 overflow-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
         <div className="space-y-2">
           <Label htmlFor="title">Title</Label>
           <Input
@@ -281,7 +347,7 @@ export function PromptEditor({
           <Textarea
             id="content"
             placeholder="Enter your prompt content..."
-            className="min-h-[300px] resize-none"
+            className="min-h-[200px] sm:min-h-[300px] resize-none"
             value={content}
             onChange={(e) => {
               setContent(e.target.value);
@@ -289,6 +355,95 @@ export function PromptEditor({
             }}
           />
         </div>
+
+        <div className="space-y-2">
+          <Label>Generate with AI</Label>
+          <div className="flex gap-2">
+            <Select value={selectedModel} onValueChange={setSelectedModel}>
+              <SelectTrigger className="flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MODELS.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    <span className="font-medium">{m.label}</span>
+                    <span className="text-muted-foreground ml-1.5 text-xs">{m.provider}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="secondary"
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="shrink-0"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate Prompt
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {(completion || isGenerating) && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Generated Prompt</Label>
+              {completion && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleGenerate}
+                    disabled={isGenerating}
+                    className="h-7 px-2 text-xs"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Regenerate
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopyGenerated}
+                    className="h-7 px-2 text-xs"
+                  >
+                    {generatedCopied ? (
+                      <Check className="h-3 w-3 mr-1" />
+                    ) : (
+                      <Copy className="h-3 w-3 mr-1" />
+                    )}
+                    Copy
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleUseGenerated}
+                    className="h-7 px-2 text-xs text-primary hover:text-primary"
+                  >
+                    <ArrowDownToLine className="h-3 w-3 mr-1" />
+                    Use This
+                  </Button>
+                </div>
+              )}
+            </div>
+            <div className="rounded-md border bg-muted/40 p-3 text-sm min-h-[80px] whitespace-pre-wrap leading-relaxed">
+              {completion || (
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Generating...
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="tags">Tags</Label>
@@ -309,14 +464,14 @@ export function PromptEditor({
         </div>
       </div>
 
-      <div className="p-4 border-t flex justify-end gap-2">
+      <div className="p-3 sm:p-4 border-t flex justify-end gap-2">
         {isNew && (
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" onClick={onCancel} size="sm" className="sm:size-default">
             Cancel
           </Button>
         )}
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Saving..." : isNew ? "Create Prompt" : "Save Changes"}
+        <Button onClick={handleSave} disabled={saving} size="sm" className="sm:size-default">
+          {saving ? "Saving..." : isNew ? "Create" : "Save"}
         </Button>
       </div>
 

@@ -59,13 +59,13 @@ export function PromptList({
   });
 
   return (
-    <div className="flex flex-col h-full border-r overflow-hidden">
-      <div className="p-4 border-b space-y-3">
+    <div className="flex flex-col h-full border-r lg:border-r overflow-hidden">
+      <div className="p-3 sm:p-4 border-b space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-lg">Prompts</h2>
+          <h2 className="font-semibold text-base sm:text-lg">Prompts</h2>
           <Button size="sm" onClick={onNewPrompt} disabled={folders.length === 0}>
-            <Plus className="h-4 w-4 mr-1" />
-            New
+            <Plus className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">New</span>
           </Button>
         </div>
         <div className="relative">

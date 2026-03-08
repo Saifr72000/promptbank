@@ -7,7 +7,10 @@ import { PromptList } from "@/components/prompt-list";
 import { PromptEditor } from "@/components/prompt-editor";
 import { CommandPalette } from "@/components/command-palette";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { Folder, Prompt } from "@/lib/database.types";
+
+type MobileView = "list" | "editor";
 
 interface MainAppProps {
   userEmail: string;
@@ -24,6 +27,13 @@ export function MainApp({ userEmail, initialFolders, initialPrompts }: MainAppPr
   const [searchQuery, setSearchQuery] = useState("");
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileView, setMobileView] = useState<MobileView>("list");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Dismiss any login loading toast when dashboard loads
+  useEffect(() => {
+    toast.dismiss("login-redirect");
+  }, []);
 
   // Update state when props change (after server revalidation)
   useEffect(() => {
@@ -39,11 +49,15 @@ export function MainApp({ userEmail, initialFolders, initialPrompts }: MainAppPr
   const handleNewPrompt = useCallback(() => {
     setSelectedPromptId(null);
     setIsNewPrompt(true);
+    setMobileView("editor");
   }, []);
 
   const handleSelectPrompt = useCallback((promptId: string | null) => {
     setSelectedPromptId(promptId);
     setIsNewPrompt(false);
+    if (promptId) {
+      setMobileView("editor");
+    }
   }, []);
 
   const handleSavePrompt = useCallback(() => {
@@ -53,11 +67,17 @@ export function MainApp({ userEmail, initialFolders, initialPrompts }: MainAppPr
   const handleDeletePrompt = useCallback(() => {
     setSelectedPromptId(null);
     setIsNewPrompt(false);
+    setMobileView("list");
   }, []);
 
   const handleCancelNewPrompt = useCallback(() => {
     setIsNewPrompt(false);
     setSelectedPromptId(null);
+    setMobileView("list");
+  }, []);
+
+  const handleBackToList = useCallback(() => {
+    setMobileView("list");
   }, []);
 
   // Keyboard shortcuts
@@ -91,12 +111,27 @@ export function MainApp({ userEmail, initialFolders, initialPrompts }: MainAppPr
 
   return (
     <div className="h-screen flex flex-col">
-      <Header userEmail={userEmail} />
+      <Header 
+        userEmail={userEmail} 
+        onMenuClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+        showBackButton={mobileView === "editor"}
+        onBackClick={handleBackToList}
+      />
       
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Mobile Sidebar Overlay - starts below header */}
+        {mobileSidebarOpen && (
+          <div 
+            className="fixed inset-0 top-14 bg-black/50 z-40 lg:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+        
+        {/* Folder Sidebar - Hidden on mobile, shown on lg+ */}
         <div className={cn(
           "flex-shrink-0 transition-all duration-300 ease-in-out",
-          sidebarCollapsed ? "w-16" : "w-64"
+          "hidden lg:block",
+          sidebarCollapsed ? "lg:w-16" : "lg:w-64"
         )}>
           <FolderSidebar
             folders={folders}
@@ -106,8 +141,30 @@ export function MainApp({ userEmail, initialFolders, initialPrompts }: MainAppPr
             onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
           />
         </div>
+
+        {/* Mobile Sidebar - Slides in from left */}
+        <div className={cn(
+          "fixed left-0 top-14 bottom-0 w-64 z-50 transition-transform duration-300 ease-in-out lg:hidden bg-background",
+          mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}>
+          <FolderSidebar
+            folders={folders}
+            selectedFolderId={selectedFolderId}
+            onSelectFolder={(id) => {
+              setSelectedFolderId(id);
+              setMobileSidebarOpen(false);
+            }}
+            collapsed={false}
+            onToggleCollapse={() => setMobileSidebarOpen(false)}
+          />
+        </div>
         
-        <div className="w-80 shrink-0 min-w-0 overflow-hidden">
+        {/* Prompt List - Full width on mobile when in list view, fixed width on lg+ */}
+        <div className={cn(
+          "shrink-0 min-w-0 overflow-hidden transition-all duration-300",
+          "w-full lg:w-80",
+          mobileView === "editor" && "hidden lg:block"
+        )}>
           <PromptList
             prompts={prompts}
             folders={folders}
@@ -120,15 +177,21 @@ export function MainApp({ userEmail, initialFolders, initialPrompts }: MainAppPr
           />
         </div>
         
-        <PromptEditor
-          prompt={selectedPrompt}
-          folders={folders}
-          selectedFolderId={selectedFolderId}
-          isNew={isNewPrompt}
-          onSave={handleSavePrompt}
-          onDelete={handleDeletePrompt}
-          onCancel={handleCancelNewPrompt}
-        />
+        {/* Editor - Full width on mobile when in editor view, flex-1 on lg+ */}
+        <div className={cn(
+          "flex-1 min-w-0 h-full",
+          mobileView === "list" && "hidden lg:block"
+        )}>
+          <PromptEditor
+            prompt={selectedPrompt}
+            folders={folders}
+            selectedFolderId={selectedFolderId}
+            isNew={isNewPrompt}
+            onSave={handleSavePrompt}
+            onDelete={handleDeletePrompt}
+            onCancel={handleCancelNewPrompt}
+          />
+        </div>
       </div>
 
       <CommandPalette

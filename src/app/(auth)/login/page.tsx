@@ -32,7 +32,10 @@ export default function LoginPage() {
       return;
     }
 
-    toast.success("Welcome back!");
+    // Show loading message while redirecting
+    toast.loading("Loading your dashboard...", { id: "login-redirect" });
+    
+    // Navigate and refresh to pick up new auth state
     router.push("/");
     router.refresh();
   };

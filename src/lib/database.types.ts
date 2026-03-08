@@ -20,6 +20,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          parent_id: string | null
           updated_at: string | null
           user_id: string
         }
@@ -28,6 +29,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
+          parent_id?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -36,8 +38,50 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          parent_id?: string | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_settings: {
+        Row: {
+          id: string
+          user_id: string
+          openai_api_key: string | null
+          anthropic_api_key: string | null
+          system_prompt: string | null
+          max_output_tokens: number | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          openai_api_key?: string | null
+          anthropic_api_key?: string | null
+          system_prompt?: string | null
+          max_output_tokens?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          openai_api_key?: string | null
+          anthropic_api_key?: string | null
+          system_prompt?: string | null
+          max_output_tokens?: number | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -189,3 +233,5 @@ export type FolderUpdate = TablesUpdate<"folders">
 export type Prompt = Tables<"prompts">
 export type PromptInsert = TablesInsert<"prompts">
 export type PromptUpdate = TablesUpdate<"prompts">
+
+export type UserSettings = Tables<"user_settings">

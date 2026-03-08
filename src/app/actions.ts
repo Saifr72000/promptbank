@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { FolderInsert, FolderUpdate, PromptInsert, PromptUpdate } from "@/lib/database.types";
 
 // Folder Actions
-export async function createFolder(data: { name: string; color?: string }) {
+export async function createFolder(data: { name: string; color?: string; parent_id?: string | null }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -17,6 +17,7 @@ export async function createFolder(data: { name: string; color?: string }) {
     name: data.name,
     color: data.color || "#6366f1",
     user_id: user.id,
+    parent_id: data.parent_id || null,
   };
 
   const { data: folder, error } = await supabase
@@ -309,4 +310,79 @@ export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   revalidatePath("/");
+}
+
+// User Settings
+export async function getSettings() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Not authenticated", data: null };
+  }
+
+  const { data, error } = await supabase
+    .from("user_settings")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    return { error: error.message, data: null };
+  }
+
+  return { data };
+}
+
+export async function saveSettings(settings: {
+  openai_api_key?: string | null;
+  anthropic_api_key?: string | null;
+  system_prompt?: string | null;
+  max_output_tokens?: number | null;
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Not authenticated" };
+  }
+
+  const { error } = await supabase
+    .from("user_settings")
+    .upsert(
+      {
+        user_id: user.id,
+        openai_api_key: settings.openai_api_key ?? null,
+        anthropic_api_key: settings.anthropic_api_key ?? null,
+        system_prompt: settings.system_prompt ?? null,
+        max_output_tokens: settings.max_output_tokens ?? null,
+      },
+      { onConflict: "user_id" }
+    );
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { success: true };
+}
+
+// Keep old name as alias for backwards compatibility
+export const saveApiKeys = saveSettings;
+
+export async function updatePassword(newPassword: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Not authenticated" };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { success: true };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LogOut, Download, Upload, User, Settings, Sparkles } from "lucide-react";
+import { LogOut, Download, Upload, User, Settings, Sparkles, Menu, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,9 +25,12 @@ import { useRouter } from "next/navigation";
 
 interface HeaderProps {
   userEmail: string;
+  onMenuClick?: () => void;
+  showBackButton?: boolean;
+  onBackClick?: () => void;
 }
 
-export function Header({ userEmail }: HeaderProps) {
+export function Header({ userEmail, onMenuClick, showBackButton, onBackClick }: HeaderProps) {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [importData, setImportData] = useState("");
   const [loading, setLoading] = useState(false);
@@ -114,32 +117,64 @@ export function Header({ userEmail }: HeaderProps) {
 
   return (
     <header className="h-14 border-b px-4 flex items-center justify-between bg-background">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Mobile: Back button when in editor view, Menu button otherwise */}
+        {showBackButton ? (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="lg:hidden h-8 w-8"
+            onClick={onBackClick}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        ) : (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="lg:hidden h-8 w-8"
+            onClick={onMenuClick}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        )}
+        
         <div className="w-8 h-8 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center">
           <Sparkles className="w-5 h-5 text-white dark:text-zinc-900" />
         </div>
-        <h1 className="text-xl font-bold">Promptbank</h1>
+        <h1 className="text-lg sm:text-xl font-bold">Promptbank</h1>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={handleExport} disabled={loading}>
+      <div className="flex items-center gap-1 sm:gap-2">
+        {/* Export/Import - Hidden on mobile, shown in dropdown instead */}
+        <Button variant="ghost" size="sm" onClick={handleExport} disabled={loading} className="hidden sm:flex">
           <Download className="h-4 w-4 mr-1" />
-          Export
+          <span className="hidden md:inline">Export</span>
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => setIsImportOpen(true)}>
+        <Button variant="ghost" size="sm" onClick={() => setIsImportOpen(true)} className="hidden sm:flex">
           <Upload className="h-4 w-4 mr-1" />
-          Import
+          <span className="hidden md:inline">Import</span>
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <User className="h-4 w-4 mr-1" />
-              {userEmail}
+            <Button variant="ghost" size="sm" className="px-2 sm:px-3">
+              <User className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline max-w-[120px] md:max-w-[200px] truncate">{userEmail}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem disabled>
+            {/* Mobile only: Export/Import in dropdown */}
+            <DropdownMenuItem onClick={handleExport} disabled={loading} className="sm:hidden">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIsImportOpen(true)} className="sm:hidden">
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="sm:hidden" />
+            <DropdownMenuItem onClick={() => router.push("/settings")}>
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </DropdownMenuItem>
